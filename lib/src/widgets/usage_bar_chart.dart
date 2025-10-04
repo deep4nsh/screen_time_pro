@@ -1,12 +1,13 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../models/app_usage.dart';
 
 class UsageBarChart extends StatelessWidget {
   final List<AppUsage> usages;
-  final String title; // "Daily" or "Weekly"
 
-  const UsageBarChart({Key? key, required this.usages, this.title = "Daily"}) : super(key: key);
+  const UsageBarChart({Key? key, required this.usages}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -17,101 +18,101 @@ class UsageBarChart extends StatelessWidget {
       );
     }
 
-    // Sort descending by usage time and take top 10
     final sorted = List<AppUsage>.from(usages)
-      ..sort((a, b) => b.timeHours.compareTo(a.timeHours));
-    final topList = sorted.length > 10 ? sorted.sublist(0, 10) : sorted;
-    final maxTime = topList.first.timeHours;
+      ..sort((a, b) => b.timeInForeground.compareTo(a.timeInForeground));
+    final topApps = sorted.length > 10 ? sorted.sublist(0, 10) : sorted;
+    final maxTime = topApps.first.timeInForeground / 3600000; // hours
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '$title App Usage',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 250,
-          child: BarChart(
-            BarChartData(
-              alignment: BarChartAlignment.spaceAround,
-              maxY: maxTime + 0.5,
-              barTouchData: BarTouchData(
-                enabled: true,
-                touchTooltipData: BarTouchTooltipData(
-                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                    final app = topList[groupIndex];
-                    return BarTooltipItem(
-                      '${app.appName}\n${app.timeHours.toStringAsFixed(2)} hrs',
-                      const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    );
-                  },
+    // Ensure maxY is at least 0.5 to show some scale
+    final maxY = maxTime > 0 ? maxTime + 0.5 : 1.0;
+    final interval = maxY > 0 ? (maxY / 5).clamp(0.1, double.infinity) : 0.2;
+
+    return SizedBox(
+      height: 300,
+      child: BarChart(
+        BarChartData(
+          maxY: maxY,
+          barGroups: topApps.asMap().entries.map((entry) {
+            int index = entry.key;
+            final app = entry.value;
+            final hours = app.timeInForeground / 3600000;
+
+            return BarChartGroupData(
+              x: index,
+              barRods: [
+                BarChartRodData(
+                  toY: hours,
+                  width: 16,
+                  borderRadius: BorderRadius.circular(6),
+                  color: Colors.blueAccent,
                 ),
-              ),
-              titlesData: FlTitlesData(
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 60,
-                    getTitlesWidget: (value, meta) {
-                      final index = value.toInt();
-                      if (index >= 0 && index < topList.length) {
-                        return RotatedBox(
-                          quarterTurns: 1,
-                          child: Text(
-                            topList[index].appName,
-                            style: const TextStyle(fontSize: 10),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }
-                      return const SizedBox();
-                    },
-                  ),
-                ),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    interval: (maxTime / 5).ceilToDouble(),
-                  ),
-                ),
-              ),
-              gridData: FlGridData(show: true),
-              borderData: FlBorderData(show: false),
-              barGroups: topList
-                  .asMap()
-                  .map(
-                    (i, app) => MapEntry(
-                  i,
-                  BarChartGroupData(
-                    x: i,
-                    barRods: [
-                      BarChartRodData(
-                        toY: app.timeHours,
-                        gradient: const LinearGradient(
-                          colors: [Colors.blueAccent, Colors.lightBlueAccent],
-                        ),
-                        borderRadius: BorderRadius.circular(6),
-                        width: 18,
-                        backDrawRodData: BackgroundBarChartRodData(
-                          show: true,
-                          toY: maxTime + 0.5,
-                          color: Colors.grey.withOpacity(0.2),
+              ],
+            );
+          }).toList(),
+          titlesData: FlTitlesData(
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 80,
+                getTitlesWidget: (value, meta) {
+                  final index = value.toInt();
+                  if (index >= 0 && index < topApps.length) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: RotatedBox(
+                        quarterTurns: 1,
+                        child: Text(
+                          topApps[index].appName,
+                          style: const TextStyle(fontSize: 10),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              )
-                  .values
-                  .toList(),
+                    );
+                  }
+                  return const SizedBox();
+                },
+              ),
             ),
-            swapAnimationDuration: const Duration(milliseconds: 600),
-            swapAnimationCurve: Curves.easeInOut,
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                interval: interval,
+                reservedSize: 40,
+                getTitlesWidget: (value, meta) {
+                  return Text(
+                    value.toStringAsFixed(1),
+                    style: const TextStyle(fontSize: 10),
+                  );
+                },
+              ),
+            ),
+          ),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: interval,
+          ),
+          borderData: FlBorderData(show: false),
+          barTouchData: BarTouchData(
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                final app = topApps[groupIndex];
+                return BarTooltipItem(
+                  '${app.appName}\n${(app.timeInForeground / 3600000).toStringAsFixed(2)} hrs',
+                  const TextStyle(color: Colors.white),
+                );
+              },
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 }

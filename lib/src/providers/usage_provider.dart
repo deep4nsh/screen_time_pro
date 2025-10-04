@@ -1,67 +1,104 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../models/app_usage.dart';
 import '../services/usage_service.dart';
 
-
 class UsageProvider extends ChangeNotifier {
   final UsageService _service = UsageService();
-  List<AppUsage> daily = [];
-  List<AppUsage> weekly = [];
-  bool hasPermission = false;
-  bool loading = false;
 
+  // Daily usage data
+  List<AppUsage> _dailyApps = [];
+  List<AppUsage> get dailyApps => _dailyApps;
+
+  // Weekly usage data
+  Map<String, List<double>> _weeklyCategoryData = {};
+  Map<String, List<double>> get weeklyCategoryData => _weeklyCategoryData;
+
+  bool _loading = true;
+  bool get loading => _loading;
+
+  bool _loadingWeekly = false;
+  bool get loadingWeekly => _loadingWeekly;
+
+  bool _hasPermission = false;
+  bool get hasPermission => _hasPermission;
 
   UsageProvider() {
-    init();
+    _init();
   }
 
-
-  Future<void> init() async {
-    hasPermission = await _service.checkPermission();
-    if (hasPermission) await refreshAll();
+  Future<void> _init() async {
+    _hasPermission = await _service.checkPermission();
+    if (_hasPermission) {
+      await refreshDaily();
+      await refreshWeekly(); // Load weekly data on init
+      _startRealTimeUpdates();
+    }
+    _loading = false;
     notifyListeners();
   }
 
+  /// Refresh daily usage once
+  Future<void> refreshDaily() async {
+    _loading = true;
+    notifyListeners();
 
-  Future<void> requestPermission() async {
+    _dailyApps = await _service.fetchUsageOnce();
+
+    _loading = false;
+    notifyListeners();
+  }
+
+  /// Refresh weekly usage data
+  Future<void> refreshWeekly() async {
+    _loadingWeekly = true;
+    notifyListeners();
+
+    _weeklyCategoryData = await _fetchWeeklyCategorySeries();
+
+    _loadingWeekly = false;
+    notifyListeners();
+  }
+
+  /// Open Android usage settings
+  Future<void> openSettings() async {
     await _service.openSettings();
   }
 
-
-  Future<void> refreshAll() async {
-    loading = true;
-    notifyListeners();
-    try {
-      daily = await _service.fetchUsage(interval: 'daily');
-      weekly = await _service.fetchUsage(interval: 'weekly');
-    } catch (e) {
-// handle
-    }
-    loading = false;
-    notifyListeners();
+  /// Real-time usage updates for daily data
+  void _startRealTimeUpdates() {
+    _service.getUsageStream().listen((apps) {
+      _dailyApps = apps;
+      notifyListeners();
+    });
   }
 
+  /// Weekly aggregation by category
+  Future<Map<String, List<double>>> _fetchWeeklyCategorySeries() async {
+    final now = DateTime.now();
+    final Map<String, List<double>> categoryData = {
+      'Entertainment': List.filled(7, 0),
+      'Games': List.filled(7, 0),
+      'Communication': List.filled(7, 0),
+      'Learning': List.filled(7, 0),
+      'Other': List.filled(7, 0),
+    };
 
-  double totalTime(List<AppUsage> list) => list.fold(0.0, (p, e) => p + e.timeHours);
+    for (int i = 0; i < 7; i++) {
+      final day = now.subtract(Duration(days: 6 - i));
+      final startOfDay = DateTime(day.year, day.month, day.day);
+      final endOfDay = startOfDay.add(Duration(days: 1));
 
+      // Fetch usage for specific date range
+      final dailyList = await _service.fetchUsageForDateRange(startOfDay, endOfDay);
 
-  Map<String, double> categorize(List<AppUsage> list) {
-// Basic categorization by package name heuristics. You should provide a better mapping.
-    final Map<String, double> map = {};
-    for (var a in list) {
-      final cat = _guessCategory(a.packageName);
-      map[cat] = (map[cat] ?? 0) + a.timeHours;
+      for (var app in dailyList) {
+        final category = app.category.isNotEmpty ? app.category : 'Other';
+        if (categoryData.containsKey(category)) {
+          categoryData[category]![i] += app.timeInForeground / 3600000; // convert ms → hours
+        }
+      }
     }
-    return map;
-  }
 
-
-  String _guessCategory(String pkg) {
-    final p = pkg.toLowerCase();
-    if (p.contains('youtube') || p.contains('netflix') || p.contains('prime')) return 'Entertainment';
-    if (p.contains('edu') || p.contains('khan') || p.contains('coursera') || p.contains('udemy') || p.contains('google.classroom')) return 'Learning';
-    if (p.contains('whatsapp') || p.contains('messag') || p.contains('telegram') || p.contains('signal')) return 'Communication';
-    if (p.contains('game') || p.contains('puzzle')) return 'Games';
-    return 'Other';
+    return categoryData;
   }
 }

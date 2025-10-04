@@ -1,22 +1,18 @@
 name: screen_time_pro
-description: A clean, professional screen time tracking app (Android).
+description: Screen time tracker
+publish_to: "none"
 version: 1.0.0+1
-publish_to: 'none'
-
-
 environment:
-  sdk: '>=2.17.0 <3.0.0'
-
+  sdk: ">=2.18.0 <3.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.2
   provider: ^6.0.5
-  http: ^0.13.5
+  usage_stats: ^1.2.0
+  device_apps: ^2.2.0
   fl_chart: ^0.69.1
-  intl: ^0.18.1
-
+  cupertino_icons: ^1.0.2
 
 flutter:
   uses-material-design: true
