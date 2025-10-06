@@ -15,12 +15,13 @@ A Flutter-based Android app that tracks and visualizes your daily and weekly app
 
 ## Screenshots
 
-<img width="540" height="1170" alt="image" src="https://github.com/user-attachments/assets/9ac72643-28d4-4655-b352-c9ea61ec742b" />
-<img width="540" height="1170" alt="image" src="https://github.com/user-attachments/assets/7e07d2ec-319f-4887-97e4-6022043b20a2" />
-<img width="540" height="1170" alt="image" src="https://github.com/user-attachments/assets/90579a56-2856-4393-86bd-89421ff5a211" />
-<img width="540" height="1170" alt="image" src="https://github.com/user-attachments/assets/72d00f01-32e4-4b43-a8d5-bd10ea61103f" />
-<img width="540" height="1170" alt="image" src="https://github.com/user-attachments/assets/60ca2f49-468e-40bf-b4f0-84cd95be31a2" />
-<img width="540" height="1170" alt="image" src="https://github.com/user-attachments/assets/071ce9cf-deab-4f12-9057-3ff4d2fbd857" />
+![WhatsApp Image 2025-10-07 at 12 38 34 AM (2)](https://github.com/user-attachments/assets/4b1b7398-dbd6-498b-9cb2-31ba4e61c9b0)
+![WhatsApp Image 2025-10-07 at 12 38 34 AM (1)](https://github.com/user-attachments/assets/dceeacbe-9c2a-4126-9f07-05f106368649)
+![WhatsApp Image 2025-10-07 at 12 38 34 AM](https://github.com/user-attachments/assets/56b7f939-34e5-447e-8196-60930011af09)
+![WhatsApp Image 2025-10-07 at 12 38 35 AM](https://github.com/user-attachments/assets/55db2359-1cd0-459b-858f-707d9842922a)
+
+
+
 
 
 ## Requirements
